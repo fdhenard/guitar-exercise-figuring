@@ -1,16 +1,7 @@
-(ns guitar-exercise-figuring.guitar-exercise-figuring
-  "FIXME: my new org.corfield.new/scratch project."
-  (:require [clojure.math.combinatorics :as combo]))
+(ns guitar-exercise-figuring.chords
+  (:require [clojure.math.combinatorics :as combo]
+            [guitar-exercise-figuring.core :as core]))
 
-(defn exec
-  "Invoke me with clojure -X guitar-exercise-figuring.guitar-exercise-figuring/exec"
-  [opts]
-  (println "exec with" opts))
-
-(defn -main
-  "Invoke me with clojure -M -m guitar-exercise-figuring.guitar-exercise-figuring"
-  [& args]
-  (println "-main with" args))
 
 (def guitar-key-priority
   [{:key "C"
@@ -42,39 +33,9 @@
    {:key "G"
     :priority 1}])
 
-(defn priority->priority-weight [priority priority-max]
-  (let [weight-per-priority (/ 1 priority-max)
-        priority-weight (+ weight-per-priority
-                           (- 1 (* priority weight-per-priority)))]
-    priority-weight))
-
-(defn priorities->priority-weights [priorities]
-  (let [priority-set (set priorities)
-        priority-count (count priority-set)
-        priority-max (apply max priorities)]
-    (if-not (= priority-count priority-max)
-      (throw (ex-info "priority count should equal priority-max"
-                      {:priority-count priority-count
-                       :priority-max priority-max}))
-      (->> priority-set
-           (map #(vector % (priority->priority-weight % priority-max)))
-           (into {})))))
-
-(comment
-
-  (priority->priority-weight 3 9)
-  (priority->priority-weight 1 9)
-  (priority->priority-weight 2 9)
-  (priority->priority-weight 5 9)
-  (priority->priority-weight 9 9)
-
-  (- 1 (/ 1 9))
-
-  )
-
 
 (def key-priorities->weights
-  (priorities->priority-weights (map :priority guitar-key-priority)))
+  (core/priorities->priority-weights (map :priority guitar-key-priority)))
 
 (comment
 
@@ -99,7 +60,7 @@
     :priority 4}])
 
 (def chord-degree-priorities->weights
-  (priorities->priority-weights (map :priority chord-degree-priority)))
+  (core/priorities->priority-weights (map :priority chord-degree-priority)))
 
 (comment
 
@@ -249,19 +210,22 @@
     :combined-priority-weight (+ key-priority-weight chord-degree-priority-weight)}))
 
 
+(defn chords []
+  (let [cart-prod-res (combo/cartesian-product guitar-key-priority chord-degree-priority)
+        cart-prod-combined (map combine-cart-prod cart-prod-res)
+        grouped (group-by :chord-name cart-prod-combined)
+        something (map (fn [[chord-name chord-derivations]]
+                         (let [combined-weights (map :combined-priority-weight chord-derivations)]
+                           {:chord-name chord-name
+                            :combined-priority-weight (reduce + combined-weights)
+                            :chord-derivations chord-derivations}))
+                       grouped)]
+    something))
+
+
 (comment
 
-  (def the-dater
-    (let [cart-prod-res (combo/cartesian-product guitar-key-priority chord-degree-priority)
-          cart-prod-combined (map combine-cart-prod cart-prod-res)
-          grouped (group-by :chord-name cart-prod-combined)
-          something (map (fn [[chord-name chord-derivations]]
-                           (let [combined-weights (map :combined-priority-weight chord-derivations)]
-                            {:chord-name chord-name
-                             :combined-priority-weight (reduce + combined-weights)
-                             :chord-derivations chord-derivations}))
-                         grouped)]
-      something))
+  (def the-dater (chords))
 
   the-dater
 
